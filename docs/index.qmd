@@ -1,0 +1,1469 @@
+---
+title: "Predição de quantidade diária de bicicletas locadas pelo sistema Capital Bikeshare^®^ "
+author: "Marcio Vakassugui"
+abstract: 'Prever a quantidade de bicicletas locadas diariamente pelos usuários do sistema *Capital Bikeshare* por meio de um modelo de regressão linear.  '
+date: 10-06-2022
+toc-location: left
+toc-title: "Conteúdo"
+toc: true
+execute: 
+  fig-cap-location: "bottom"
+  warning: false
+  error: false
+  message: false
+lang: pt
+language:
+    title-block-author-single: "Autor:"
+    title-block-published: "Publicaçao:"
+page-layout: article
+format:
+   html:
+     minimal: true
+     highlight-style: dracula
+     fig_caption: yes
+     code-fold: true
+     theme: sky
+css: custom_quarto.css
+bibliography: [modelagem_linear_tcc.bib]
+reference-location: margin
+citation-location: margin
+---
+
+```{r label = 'leitura dos dados'}
+#| echo: false
+
+dados <- readr::read_rds("../data/modelagem_day.rds")
+source("../R/funcao_tema_graficos.R")
+```
+
+```{r label = 'carregar_pacote_patchwork'}
+#| echo: false
+
+library(patchwork)
+```
+
+<br>
+
+
+## INTRODUÇÃO
+
+Na busca por meios de transporte que permitam a mobilidade urbana de forma sustentável e que atendam às necessidades da sociedade para locomoção de pessoas sem comprometer os recursos naturais do planeta, encontra-se as bicicletas.
+
+Aqueles que as escolhem adotam um novo estilo de vida repleto de vantagens.
+
+No Brasil, segundo o artigo de @oliveiradasilvaBicicletaEstaNa2012, o percentual médio nacional de uso de bicicletas, entre todos os modos de locomoção, é de 7%. Uma forma de aumentar este percentual nos centros urbanos é o compartilhamento de bicicletas por meio de sistemas que implementam serviços de locação como o *Capital Bikeshare^®^*.
+
+*Capital Bikeshare^®^* é um sistema de compartilhamento de bicicletas do metrô de Washington, nos Estados Unidos, com mais de 5.000 bicicletas disponíveis em 600 estações e sete jurisdições: Washington, DC; Arlington, VA; Alexandria, VA; Montgomery County, MD; Prince George's County, MD; Fairfax County, VA e Falls Church city, VA.
+
+A partir da base de dados '*days.csv*', fornecida pela empresa Motivate^®^, responsável pela gestão do sistema, e disponível em @BikeSharingDataset2018, construirei um modelo preditivo para a quantidade de bicicletas compartilhadas/locadas pelos usuários, por meio de uma modelagem de regressão linear, utilizando variáveis como: condições climáticas, precipitação, dia da semana, estações do ano, mês, dias úteis, feriados, temperatura, umidade etc., que podem ou não influenciar no comportamento dos usuários de um serviço de compartilhamento de bicicletas.
+
+## ANÁLISE EXPLORATÓRIA DOS DADOS
+
+Originalmente a base de dados é composta por 731 observações e 17 variáveis. Foram criadas as variáveis temp_real (temperatura real), hum_real (umidade real) e windspeed_real (velocidade do vento real) para se entender a relação entre as variáveis temperatura, umidade e velocidade do vento com a variável quantidade de bicicletas locadas (figuras 02, 03 e 04), haja vista que os dados destas variáveis encontram-se inicialmente normalizadas.
+
+
+| variável       | descrição                                                                                                                                                                             | tipo_dado    | exemplo       | \% NULL |
+|-------------|--------------------|-------------|-------------|-------------|
+| dteday         | data <br>(YYYY-MM-DD)                                                                                                                                                                 | data         | 2012-12-23    | 0       |
+| season         | estação<br>1-springer, 2-summer, 3-fall,4-winter                                                                                                                                      | categórica   | 1,2,4         | 0       |
+| yr             | ano <br>0-2011, 1-2012                                                                                                                                                                | categórica   | 0,1           | 0       |
+| mnth           | month<br>(1 a 12)                                                                                                                                                                     | inteira      | 1,2,3...12    | 0       |
+| holiday        | feriado<br>0-não, 1 - sim                                                                                                                                                             | categórica   | 0,1           | 0       |
+| weekday        | dia da semana<br>0-segunda, 1-terça, 2-quarta, 3-quinta, 4-sexta<br>5-sábado, 6-domingo                                                                                               | categórica   | 0,6,3         | 0       |
+| workingday      | dia útil<br>0-não dia útil (= feriado ou =fim de semana)<br>1-dia útil (= não feriado ou = não fim de semana)                                                                         | categórica   | 0,1           | 0       |
+| weathersit     | situação do tempo<br>1-claro, pouca nuvens e parcialmente nublado<br>2-névoa, nublado ou poucas nuvens<br>3-neve ou chuva leves com trovoadas<br>4-chuva ou neve pesadas com trovoada | categórica   | 1,2,3,4       | 0       |
+| temp_norm      | temperatura normalizada em celsius<br>temp=(t-tmin)/(tmax-tmin), <br>tmin=-8 e tmax=+39                                                                                               | quantitativa | 0.08, 0.22    | 0       |
+| atemp          | sensação térmica normalizada em celsius<br>atemp=(t-tmin)/(tmax-tmin),<br>tmin=-16 e tmax=+50                                                                                         | quantitativa | 0.09, 0.303   | 0       |
+| hum_norm       | umidade normalizada<br>valores divididos por 100 (máx.)                                                                                                                               | quantitativa | 0.53, 0.8     | 0       |
+| windspeed_norm | velocidade do vento normalizada<br>valores divididos por 67 (máx.)                                                                                                                    | quantitativa | 0.194, 0.2985 | 0       |
+| casual         | quantidade de usuários classificados como casuais                                                                                                                                     | quantitativa | 0, 57         | 0       |
+| registered     | quantidade de usuários classificados como registrados                                                                                                                                 | quantitativa | 1, 118        | 0       |
+| cnt            | quantidade total de bicicletas alugadas, incluindo<br>casuais e registradas                                                                                                           | quantitativa | 1, 175        | 0       |
+| temp_real      | temperatura real em celsius <br>temp_real=47\*temp_norm-8                                                                                                                             | quantitativa | -3, 26        | 0       |
+| hum_real       | umidade real<br>umidade_real= umidade_norm\*100                                                                                                                                       | quantitativa | 47.04, 86.25  | 0       |
+| windspeed_real | velocidade do vento real<br>windspeed_real=windspeed_norm\*67                                                                                                                         | quantitativa | 10.75,23.67   | 0       |
+
+<br>
+
+As cinco primeiras linhas da base de dados podem ser vistas abaixo.
+
+```{r label = 'visualizacao_dados_originais'}
+#| column: page
+#| code-fold: false
+
+knitr::kable(dados[1:5, 1:18])
+
+```
+
+### ANÁLISE DE DISTRIBUIÇÃO DE FREQUÊNCIAS DE LOCAÇÃO
+
+Em nosso estudo, a variável resposta será a quantidade de locações de bicicletas (cnt) e esta possui as seguintes medidas de posição:
+
+```{r label = 'resumo_variavel_cnt'}
+#| include: true
+#| echo: true
+#| code-fold: false
+
+summary(dados[['cnt']])
+
+```
+
+Observe que a média e a mediana possuem valores próximos e que as quantidades mínima e máxima possuem valores entre 22 e 8714 bicicletas locadas. A figura 01 apresenta o histograma da distribuição da variável de interesse com assimetria negativa.
+
+```{r label = 'grafico01_gráfico_de_coluna_versus_mes'}
+#| fig-align: center
+#| fig-width: 6.7
+#| fig-height: 5
+#| fig-cap: 'Figura 01-Histograma e curva de densidade do compartilhamento de bicicletas.'
+#| cap-location: margin
+
+pallete_2cores <- c("#000000", "#FFFFFF")
+
+plot01 <- dados |>
+  dplyr::filter(yr == 2012) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = cnt) +
+  ggplot2::geom_histogram(
+    ggplot2::aes(y = ..density..),
+    bins = 15,
+    fill = "#FFFFFF",
+    color = "#000000"
+  ) +
+  ggplot2::labs(
+    title = "Histograma do total de locações (cnt)",
+    x = "quantidade de locações",
+    y = ""
+  ) +
+  ggplot2::geom_density(
+    lwd = 1, colour = "#1F487E",
+    alpha = 0.15
+  ) +
+  ggplot2::theme_classic()
+
+plot01
+
+```
+
+<br>
+
+### ANÁLISE DA VARIÁVEL TEMPERATURA
+
+```{r label = 'analise_variavel_temperatura'}
+#| fig-align: center
+#| fig-width: 6.7
+#| fig-height: 5
+#| fig-cap: 'Figura 02-Histograma e boxplot da temperatura.'
+#| cap-location: margin
+
+p2_1 <- dados |>
+  dplyr::select(temp_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = temp_real)) +
+  ggplot2::geom_boxplot(
+    fill = "#FFFFFF",
+    alpha = 1,
+    color = "#000000"
+  ) +
+  ggplot2::labs(
+    title = "",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(plot.margin = ggplot2::unit(c(0, 0, 0, 0), "cm")) +
+  ggplot2::theme(
+    # panel.grid = ggplot2::element_line(color = "#000000"),
+    plot.margin = ggplot2::unit(c(0, 1, 0, 0), "cm"),
+    axis.text.x = ggplot2::element_text( # texto do eixo x
+      color = "#FFFFFF",
+      size = 9,
+      face = "plain",
+      margin = ggplot2::unit(c(0.3, 0.5, 0.5, 0), "cm")
+    ),
+    axis.text.y = ggplot2::element_text( # texto do eixo y
+      color = "#FFFFFF",
+      size = 7,
+      face = "plain",
+      family = "",
+      margin = ggplot2::unit(c(0, 0.5, 0, 0.5), "cm")
+    )
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 35, 5))
+
+
+p2_2 <- dados |>
+  dplyr::select(temp_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = temp_real)) +
+  ggplot2::geom_histogram(
+    fill = "#FFFFFF",
+    color = "#000000",
+    alpha = 1
+  ) +
+  ggplot2::labs(
+    title = "Temperaturas Reais",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(
+    plot.margin = ggplot2::unit(c(1, 1.2, 0.5, 0), "cm")
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 35, 5))
+
+
+
+layout <- c(
+  area(t = 5, l = 1, b = 5, r = 5),
+  area(t = 1, l = 1, b = 4, r = 5)
+)
+p2 <- p2_1 + p2_2 + plot_layout(design = layout)
+p2
+
+
+```
+
+```{r label = 'medidas_temperatura'}
+#| echo: false
+#| include: false
+
+# temperatura
+# mínima
+temp_minima <- dados |>
+  dplyr::summarise(temp_min = min(temp_real)) |>
+  as.character()
+
+# máxima
+temp_maxima <- dados |>
+  dplyr::summarise(temp_max = max(temp_real)) |>
+  as.character()
+
+# média
+temp_media <- dados |>
+  dplyr::summarise(temp_media = round(mean(temp_real, na.rm = TRUE), 1)) |>
+  as.character()
+
+# mediana
+temp_mediana <- dados |>
+  dplyr::summarise(temp_mediana = round(median(temp_real, na.rm = TRUE), 2)) |>
+  as.character()
+
+# moda
+temp_moda <- dados |>
+  dplyr::select(temp_real) |>
+  table() |>
+  sort() |>
+  tail(n = 1) |>
+  as.data.frame()
+
+temp_moda <- temp_moda$temp_real |>
+  as.character()
+
+```
+
+
+
+```{r label = 'distribuicao_frequencia_temperaturas'}
+#| column: margin
+
+fabs_loc_velocidade <- dados |>
+  dplyr::select(windspeed_real) |>
+  table()
+
+
+intervalo_classes_velocidade <- seq(-5, 35, 10)
+
+tab_classes_velocidade <- table(cut(dados$windspeed_real,
+  breaks = intervalo_classes_velocidade,
+  right = FALSE
+)) |>
+  prop.table() |>
+  data.frame() |>
+  dplyr::mutate(Freq = round(Freq * 100, 1))
+
+tab_classes_velocidade |>
+  knitr::kable()
+
+```
+A base possui temperatura mínima de `r temp_minima`ºC, temperatura máxima de `r temp_maxima`ºC, média de `r temp_media`ºC, mediana de `r temp_mediana`ºC e moda de `r temp_moda`ºC.
+
+Na tabela de distribuição de frequência de temperaturas ao lado, abserva-se que 65.8% das locações ocorreram entre as temperaturas 5ºC e 14ºC. 
+
+Em temperaturas muito baixas (-5ºC a 4ºC) ou muito altas (25ºC a 34ºC) a locação de bicicletas é pequena (entre 2% e 4%). 
+
+
+### ANÁLISE DA VARIÁVEL UMIDADE
+
+```{r label = 'analise_variavel_umidade'}
+#| fig-align: center
+#| fig-width: 6.7
+#| fig-height: 5
+#| fig-cap: 'Figura 03-Histograma e boxplot da umidade relativa do ar.'
+#| cap-location: margin
+
+p3_1 <- dados |>
+  dplyr::select(hum_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = hum_real)) +
+  ggplot2::geom_boxplot(
+    fill = "#FFFFFF",
+    alpha = 1,
+    color = "#000000"
+  ) +
+  ggplot2::labs(
+    title = "",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(plot.margin = ggplot2::unit(c(0, 0, 0, 0), "cm")) +
+  ggplot2::theme(
+    # panel.grid = ggplot2::element_line(color = "#000000"),
+    plot.margin = ggplot2::unit(c(0, 1, 0, 0), "cm"),
+    axis.text.x = ggplot2::element_text( # texto do eixo x
+      color = "#FFFFFF",
+      size = 9,
+      face = "plain",
+      margin = ggplot2::unit(c(0.3, 0.5, 0.5, 0), "cm")
+    ),
+    axis.text.y = ggplot2::element_text( # texto do eixo y
+      color = "#FFFFFF",
+      size = 7,
+      face = "plain",
+      family = "",
+      margin = ggplot2::unit(c(0, 0.5, 0, 0.5), "cm")
+    )
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 100, 5))
+
+
+p3_2 <- dados |>
+  dplyr::select(hum_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = hum_real)) +
+  ggplot2::geom_histogram(
+    fill = "#FFFFFF",
+    color = "#000000",
+    alpha = 1
+  ) +
+  ggplot2::labs(
+    title = "Umidades Reais",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(
+    plot.margin = ggplot2::unit(c(1, 1.2, 0.5, 0), "cm")
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 100, 5))
+
+
+
+layout <- c(
+  area(t = 5, l = 1, b = 5, r = 5),
+  area(t = 1, l = 1, b = 4, r = 5)
+)
+p3 <- p3_1 + p3_2 + plot_layout(design = layout)
+p3
+
+
+```
+
+```{r label = 'medidas_umidade'}
+#| echo: false
+#| include: false
+
+# umidade mínima
+umidade_minima <- dados |>
+  dplyr::summarise(umidade_min = min(hum_real)) |>
+  as.character()
+
+# umidade máxima
+umidade_maxima <- dados |>
+  dplyr::summarise(umidade_max = max(hum_real)) |>
+  as.character()
+
+# média
+umidade_media <- dados |>
+  dplyr::summarise(umidade_media = round(mean(hum_real, na.rm = TRUE), 1)) |>
+  as.character()
+
+# mediana
+umidade_mediana <- dados |>
+  dplyr::summarise(umidade_mediana = round(median(hum_real, na.rm = TRUE), 1)) |>
+  as.character()
+
+# moda
+umidade_moda <- dados |>
+  dplyr::select(hum_real) |>
+  table() |>
+  sort() |>
+  tail(n = 2) |>
+  data.frame()
+
+umidade_moda1 <- umidade_moda$hum_real[1]
+umidade_moda2 <- umidade_moda$hum_real[2]
+
+
+```
+
+
+```{r label = 'distribuição de frequencias_umidade'}
+#| column: margin
+
+fabs_loc_umidade <- dados |>
+  dplyr::select(hum_real) |>
+  table()
+
+
+intervalo_classes_umidade <- seq(0, 100, 10)
+
+tab_classes_umidade <- table(cut(dados$hum_real,
+  breaks = intervalo_classes_umidade,
+  right = FALSE
+)) |>
+  prop.table() |>
+  data.frame() |>
+  dplyr::mutate(Freq = round(Freq * 100, 1))
+
+tab_classes_umidade |>
+  knitr::kable()
+
+```
+
+A umidade relativa do ar mínima é de `r umidade_minima`%, a máxima de `r umidade_maxima`%, a média de `r umidade_media`%, a mediana de `r umidade_mediana`% e as modas `r umidade_moda1`% e `r umidade_moda2`%.
+
+As maiores quantidades de locações (cerca de 83.4%) ocorrem em umidades entre 40% e 79%. 
+
+A umidade relativa está diretamente relacionada ao conforto. Quando o usuário pedala, seu organismo produz gotas de suor para levar o calor gerado para a superfície da pele e então evaporá-las. Com umidades relativas altas, acima de 70%, a evaporação é dificultada produzindo  sensação de desconforto. Umidades relativas baixas, abaixo de 30%, também exigem cuidados especiais para evitar a desidratação e mal estar.
+
+
+### ANÁLISE DA VARIÁVEL VELOCIDADE DO VENTO
+
+```{r}
+#| fig-align: center
+#| fig-width: 6.7
+#| fig-height: 5
+#| fig-cap: 'Figura 04-Histograma e boxplot da velocidade do vento.'
+#| cap-location: margin
+
+
+p4_1 <- dados |>
+  dplyr::select(windspeed_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = windspeed_real)) +
+  ggplot2::geom_boxplot(
+    fill = "#FFFFFF",
+    alpha = 1,
+    color = "#000000"
+  ) +
+  ggplot2::labs(
+    title = "",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(plot.margin = ggplot2::unit(c(0, 0, 0, 0), "cm")) +
+  ggplot2::theme(
+    # panel.grid = ggplot2::element_line(color = "#000000"),
+    plot.margin = ggplot2::unit(c(0, 1, 0, 0), "cm"),
+    axis.text.x = ggplot2::element_text( # texto do eixo x
+      color = "#FFFFFF",
+      size = 9,
+      face = "plain",
+      margin = ggplot2::unit(c(0.3, 0.5, 0.5, 0), "cm")
+    ),
+    axis.text.y = ggplot2::element_text( # texto do eixo y
+      color = "#FFFFFF",
+      size = 7,
+      face = "plain",
+      family = "",
+      margin = ggplot2::unit(c(0, 0.5, 0, 0.5), "cm")
+    )
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 35, 5))
+
+
+p4_2 <- dados |>
+  dplyr::select(windspeed_real) |>
+  ggplot2::ggplot(ggplot2::aes(x = windspeed_real)) +
+  ggplot2::geom_histogram(
+    fill = "#FFFFFF",
+    color = "#000000",
+    alpha = 1
+  ) +
+  ggplot2::labs(
+    title = "Velocidades Reais",
+    x = "",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(
+    plot.margin = ggplot2::unit(c(1, 1.2, 0.5, 0), "cm")
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::scale_x_continuous(breaks = seq(0, 35, 5))
+
+
+layout <- c(
+  area(t = 5, l = 1, b = 5, r = 5),
+  area(t = 1, l = 1, b = 4, r = 5)
+)
+p4 <- p4_1 + p4_2 + plot_layout(design = layout)
+p4
+
+```
+
+```{r label = 'medidas_velocidade_do_vento'}
+#| echo: false
+#| include: false
+
+# velocidade mínima
+velocidade_minima <- dados |>
+  dplyr::summarise(velocidade_min = min(windspeed_real)) |>
+  as.character()
+
+# velocidade máxima
+velocidade_maxima <- dados |>
+  dplyr::summarise(velocidade_max = max(windspeed_real)) |>
+  as.character()
+
+# velocidade média
+velocidade_media <- dados |>
+  dplyr::summarise(velocidade_media = round(mean(windspeed_real, na.rm = TRUE), 1)) |>
+  as.character()
+
+# mediana
+velocidade_mediana <- dados |>
+  dplyr::summarise(velocidade_mediana = round(median(windspeed_real, na.rm = TRUE), 1)) |>
+  as.character()
+
+# moda
+velocidade_moda <- dados |>
+  dplyr::select(windspeed_real) |>
+  table() |>
+  sort() |>
+  tail(n = 1) |>
+  as.data.frame()
+
+velocidade_moda <- velocidade_moda$windspeed_real[1]
+
+```
+
+
+```{r label = 'distribuição de frequencias_velocidade_vento'}
+#| column: margin
+
+fabs_loc_velocidade <- dados |>
+  dplyr::select(windspeed_real) |>
+  table()
+
+
+intervalo_classes_velocidade <- seq(0, 35, 5)
+
+tab_classes_velocidade <- table(cut(dados$windspeed_real,
+  breaks = intervalo_classes_velocidade,
+  right = FALSE
+)) |>
+  prop.table() |>
+  data.frame() |>
+  dplyr::mutate(Freq = round(Freq * 100, 1))
+
+tab_classes_velocidade |>
+  knitr::kable()
+```
+
+A velocidade do vento mínima é de `r velocidade_minima` km/h, a máxima de `r velocidade_maxima` km/h, a média de `r velocidade_media` km/h, a mediana de `r velocidade_mediana` km/h e a moda de `r velocidade_moda` km/h.
+
+O vento contrário dificulta o deslocamento e pode provocar maior desgaste do usuário. Dias com fortes ventos podem influenciar as locações.
+
+A maioria das locações ocorrem com velocidades entre 5 km/h e 19 km/h. 
+
+
+### ANÁLISE DE POR ESTAÇÃO DO ANO
+
+```{r label = 'graficos_cnt_season'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+
+plot02 <- dados |>
+  dplyr::select(season, cnt, yr) |>
+  dplyr::group_by(season, yr) |>
+  dplyr::summarise(qte = sum(cnt)) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(
+    x = season,
+    y = qte,
+    fill = yr
+  ) +
+  ggplot2::geom_col(
+    position = "dodge",
+    color = "#000000",
+    alpha = 0.7
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    title = "Total de locação por estações",
+    subtitle = "Dados para os anos de 2011 e 2012",
+    x = "",
+    y = ""
+  ) +
+  ggplot2::theme(legend.position = "bottom") +
+  theme_enem_fundo_branco()
+
+plot03 <- dados |>
+  dplyr::filter(yr == 2011) |>
+  dplyr::select(cnt, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = season, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2011 por estações",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::theme(
+    legend.position = "none",
+    axis.text.x = ggplot2::element_text(angle = 0, vjust = 0.1)
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+plot04 <- dados |>
+  dplyr::filter(yr == 2012) |>
+  dplyr::select(cnt, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = season, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2012 por estações",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(
+    legend.position = "none",
+    axis.text.x = ggplot2::element_text(angle = 0, vjust = 0.1)
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+plot02
+plot03
+plot04
+
+```
+
+<figcaption>Figura 05 - Gráficos das locações por estação do ano.</figcaption>
+
+<br>
+
+Percebe-se que as estações do ano influenciam a quantidade de locações realizadas. A figura 5 mostra que a demanda é maior no verão e outono e menor no inverno.
+
+### ANÁLISE DE LOCAÇÃO POR DIAS ÚTEIS OU NÃO ÚTEIS
+
+```{r label = 'grafico_boxplot_locacao_dias_uteis'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+plot05 <- dados |>
+  dplyr::select(cnt, workingday, yr) |>
+  dplyr::group_by(workingday, yr) |>
+  dplyr::summarise(qtde = sum(cnt)) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = workingday, y = qtde, fill = yr, label = qtde) +
+  ggplot2::geom_col(position = "dodge", color = "#000000", alpha = 0.7) +
+  ggplot2::geom_text(position = ggplot2::position_dodge(0.9), vjust = -0.2, size = 3.5) +
+  ggplot2::scale_y_continuous(limits = c(0, 1600000)) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    title = "Locações por dias úteis",
+    subtitle = "Dados para os anos de 2011 e 2012",
+    x = "dias úteis",
+    y = ""
+  ) +
+  ggplot2::theme(
+    legend.position = "bottom",
+  ) +
+  theme_enem_fundo_branco()
+
+plot06 <- dados |>
+  dplyr::filter(yr == 2011) |>
+  dplyr::select(cnt, workingday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = workingday, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2011 por dias úteis",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+plot07 <- dados |>
+  dplyr::filter(yr == 2012) |>
+  dplyr::select(cnt, workingday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = workingday, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2012 por dias úteis",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000)) +
+  theme_enem_fundo_branco()
+
+plot05
+plot06
+plot07
+```
+
+<figcaption>Figura 06 - Gráfico de colunas das locações por dias úteis.</figcaption>
+<br>
+
+Diferentemente das estações do ano, aparentemente a variável 'dia úteis' (*workingday*) não é significativa para o modelo. 
+
+### ANÁLISE DE LOCAÇÃO POR SITUAÇÃO CLIMÁTICA DO DIA
+
+```{r label = 'grafico_boxplot_dias_chuvosos'}
+#| echo: false
+#| include: false
+
+dados$tempo <- dplyr::case_when(
+  dados$weathersit == "weather1" ~ "muito_bom",
+  dados$weathersit == "weather2" ~ "bom",
+  dados$weathersit == "weather3" ~ "ruim",
+  dados$weathersit == "weather4" ~ "muito_ruim"
+)
+
+```
+
+```{r label = 'grafico_colunas_tempo_meteorologico'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+
+plot08 <- dados |>
+  dplyr::select(cnt, weathersit, tempo, yr) |>
+  dplyr::group_by(tempo, yr) |>
+  dplyr::summarise(qte = sum(cnt)) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = tempo, y = qte, fill = yr, label = qte) +
+  ggplot2::geom_col(
+    position = "dodge", colour = "#000000"
+  ) +
+  ggplot2::geom_text(position = ggplot2::position_dodge(0.9), vjust = -0.2, size = 2.5) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::scale_y_continuous(limits = c(0, 1600000)) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    title = "Quantidade de locação por clima",
+    subtitle = "Dados para os anos de 2011 e 2012",
+    x = "quantidade de locação",
+    y = ""
+  ) +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "bottom")
+
+plot09 <- dados |>
+  dplyr::filter(yr == 2011) |>
+  dplyr::select(cnt, tempo) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = tempo, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2011 por clima",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+plot10 <- dados |>
+  dplyr::filter(yr == 2012) |>
+  dplyr::select(cnt, tempo) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = tempo, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2012 por clima",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+
+plot08
+plot09
+plot10
+```
+<figcaption>Figura 07 - Gráficos locações por situação climática.</figcaption>
+
+### ANÁLISE DE LOCAÇÃO POR FERIADOS OU NÃO FERIADOS
+
+```{r label = 'grafico_boxplot_locacao_feriados'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+plot11 <- dados |>
+  dplyr::select(cnt, holiday, yr) |>
+  dplyr::group_by(holiday, yr) |>
+  dplyr::summarise(qtde = sum(cnt)) |> 
+  ggplot2::ggplot() +
+  ggplot2::aes(x = holiday, y = qtde, fill = yr, label = qtde) +
+  ggplot2::geom_col(position = "dodge", color = "#000000", alpha = 0.7) +
+  ggplot2::geom_text(position = ggplot2::position_dodge(0.9), vjust = -0.2, size = 3.5) +
+  ggplot2::scale_y_continuous(limits = c(0, 2100000)) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    title = "Locações por feriados ou não",
+    subtitle = "Dados para os anos de 2011 e 2012",
+    x = "feriados",
+    y = ""
+  ) +
+  ggplot2::theme(
+    legend.position = "bottom",
+  ) +
+  theme_enem_fundo_branco()
+
+plot12 <- dados |>
+  dplyr::filter(yr == 2011) |>
+  dplyr::select(cnt, holiday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = holiday, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2011 por feriados",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  theme_enem_fundo_branco() +
+  ggplot2::theme(legend.position = "none") +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000))
+
+plot13 <- dados |>
+  dplyr::filter(yr == 2012) |>
+  dplyr::select(cnt, holiday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(x = holiday, y = cnt) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Locações de 2012 por feriados",
+    y = "",
+    x = ""
+  ) +
+  ggplot2::scale_fill_manual(values = pallete_2cores) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(
+    legend.position = "none"
+  ) +
+  ggplot2::scale_y_continuous(limits = c(0, 8000)) +
+  theme_enem_fundo_branco()
+
+plot11
+plot12
+plot13
+```
+
+<figcaption>Figura 08 - Gráfico de colunas das locações por dias úteis.</figcaption>
+<br>
+Da mesma forma que a variável 'dias úteis' (workingday), aparentemente a variável 'feriado' (holliday) também não é significativa para o modelo.
+
+As significâncias das variáveis serão analisadas no momento da modelagem.
+
+### ANÁLISE DE CORRELAÇÃO E COMBINAÇÃO LINEAR
+
+Correlação é um parâmetro estatístico utilizado para medir a relação linear entre duas variáveis. Seu valor encontra-se no intervalo de -1 a +1. Quando a correlação assume valor negativo, indica que as variáveis possuem relação inversamente proporcional e vice-versa.
+
+A figura 09 "é uma matriz em que os elementos são painéis com gráficos de dispersão para cada par de variáveis. Muitas vezes, incluem-se coeficientes de correlação entre os diferentes pares de variáveis nos paineis situados acima ou abaixo da diagonal". @morettinpedroalbertoEstatisticaCienciaDados2022a"
+
+Na modelagem dos dados é  necessário verificar o relacionamento entre as variáveis preditoras e a variável resposta. 
+
+```{r label='matriz_correlacao'}
+#| fig-align: "center"
+#| out-width: "92%"
+#| fig-cap: 'Figura09-Matriz de correlação das variáveis.'
+#| cap-location: margin
+
+
+plot11 <- psych::pairs.panels(dados[c(
+  "temp_norm",
+  "atemp_norm_calc",
+  "hum_norm",
+  "windspeed_norm",
+  "casual",
+  "registered",
+  "cnt"
+)])
+
+```
+
+
+<br>
+
+Nota-se forte correlação positiva entre as variáveis preditoras *temperatura* e *sensação térmica*, bem como entre a variável preditora *registered* (usuários membros) e a variável resposta *cnt* (total de bicicletas locadas). 
+
+Por meio do pacote "*caret*", pode-se verificar a existência de combinação linear entre variáveis.
+
+```{r label = 'verificacao_de_colinearidade_caret'}
+#| include: true
+#| echo: true
+#| code-fold: false
+
+
+x <- dados |>
+  dplyr::select(temp_norm, atemp_norm_calc, hum_norm, windspeed_norm, casual, registered, cnt)
+
+caret::findLinearCombos(x)
+
+
+```
+
+Constata-se, desta forma, a existência de combinação linear  entre as variáveis usuário *casual* (*casual*), usuário membro *registrado* ("*registered*") e a variável *resposta* (*cnt*). 
+
+### VERIFICAÇÃO DE INTERAÇÕES ENTRE VARIÁVEIS PREDITORAS
+
+### SITUAÇÃO METEOROLÓGICA E VARIÁVEIS TEMPERATURA, HUMIDADE E VELOCIDADE DO VENTO
+
+```{r label = 'gráficos_scatterplot_interacao_weathersit'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+paleta_quatro_cores <- c('#000000','#A288A6','#488B49','#6F89D8')
+
+plot12 <- dados |>
+  dplyr::select(cnt, temp_norm, weathersit) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = temp_norm, color = weathersit) +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = temp_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+plot13 <- dados |>
+  dplyr::select(cnt, hum_norm, weathersit) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = hum_norm, color = weathersit) +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = hum_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot14 <- dados |>
+  dplyr::select(cnt, windspeed_norm, weathersit) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = windspeed_norm, color = weathersit) +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = windspeed_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot12
+plot13
+plot14
+```
+<figcaption>Figura 10 - Análise de interações de variáveis quantitativas com situação meteorológica.</figcaption>
+
+
+### ESTAÇÃO E VARIÁVEIS TEMPERATURA, UMIDADE E VELOCIDADE DO VENTO
+
+```{r label = 'gráficos_interacao_estacao'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 3.8
+#| fig-height: 4
+
+
+plot15 <- dados |>
+  dplyr::select(cnt, temp_norm, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = temp_norm, color = season)  +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = temp_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot16 <- dados |>
+  dplyr::select(cnt, hum_norm, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = hum_norm, color = season) +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = hum_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot17 <- dados |>
+  dplyr::select(cnt, windspeed_norm, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = windspeed_norm, color = season)  +
+  ggplot2::scale_color_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = FALSE
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = windspeed_norm",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot15
+plot16
+plot17
+```
+<figcaption>Figura 11 - Análise de interações de variáveis quantitativas com estações do ano.</figcaption>
+
+
+### ESTAÇÃO E CLIMA, CLIMA E HOLIDAY E CLIMA E WEEKDAY
+
+```{r label = 'boxplot_interacao_clima'}
+#| column: page
+#| layout-nrow: 1
+#| fig-width: 6
+#| fig-height: 4
+
+
+plot15 <- dados |>
+  dplyr::select(cnt, weathersit, season) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = weathersit, fill = season) +
+  ggplot2::scale_fill_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_boxplot() +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = weathersit",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot16 <- dados |>
+  dplyr::select(cnt, weathersit, holiday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = holiday, fill = weathersit) +
+  ggplot2::scale_fill_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_boxplot() +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = holiday",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot17 <- dados |>
+  dplyr::select(cnt, weathersit, weekday) |>
+  ggplot2::ggplot() +
+  ggplot2::aes(y = cnt, x = weekday, fill = weathersit) +
+  ggplot2::scale_fill_manual(values = paleta_quatro_cores)+
+  ggplot2::geom_boxplot() +
+  ggplot2::theme_classic() +
+  ggplot2::labs(
+    x = "x = weekday",
+    y = "y = cnt"
+  ) +
+  ggplot2::theme(legend.position = "right")
+
+
+plot15
+plot16
+plot17
+```
+<figcaption>Figura 12 - Análise de interações de variáveis categóricas com situação meteorológica.</figcaption>
+
+
+### MODELAGEM
+
+Na modelagem, 80% dos dados  foram utilizados para aprendizagem e 20% para teste.
+
+```{r label = 'amostras_treino_teste'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+set.seed(123)
+
+indice <- sample(dim(dados)[1], size = 146)
+treino <- dados[-indice, ]
+teste <- dados[indice, ]
+
+```
+
+
+### MODELO 01
+
+O modelo inicial contempla as variáveis quantitativas *temp_norm*, *hum_norm*, *windspeed_norm*. Excluiu-se do modelo as variáveis preditoras *casual*, *registered* em função de multilinearidade.
+
+```{r label = 'modelo01_temp_hum_windspeed'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+modelo01 <- lm(cnt ~ hum_norm + temp_norm + windspeed_norm, data = treino)
+
+summary(modelo01)
+```
+
+```{r label = 'graficos_modelo01'}
+#| column: page
+#| out-width: 70%
+#| fig-align: center
+
+
+op <- par(bg = "#000000")
+graphics::par(
+  mfrow = c(2, 2),
+  bty = "l",
+  col = "#ffffff"
+)
+
+plot(modelo01,
+  bg = par("bg"),
+  col.axis = "#FFFFFF",
+  col.lab = "thistle"
+)
+
+```
+<figcaption>Figura 13 - gráficos de resíduos do modelo01</figcaption>
+
+<br>
+
+Verificando analiticamente a heteroscedasticidade:
+
+```{r label = 'modelo01_testes_verificacao'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+performance::check_heteroscedasticity(modelo01)
+
+```
+
+Observa-se a ausência de homoscedasticidade. 
+
+Na figura 13, pode-se observar também que o modelo não possui linearidade entre as variáveis preditoras e resposta.
+
+### MODELO 02
+
+Adiciona-se as variáveis qualitativas *season*, *yr*, *holiday*, *workingday* e *weathersit*, obtendo-se o modelo 02.
+
+
+```{r label = 'modelo02_com_variaveis_categoricas'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+modelo02 <- lm(cnt ~ hum_norm + temp_norm + windspeed_norm + season + yr + holiday + weekday,
+               data = treino)
+
+summary(modelo02)
+
+```
+
+
+```{r label = 'graficos_modelo02'}
+#| column: page
+#| out-width: 70%
+#| fig-align: center
+
+
+op <- par(bg = "#000000")
+graphics::par(
+  mfrow = c(2, 2),
+  bty = "l",
+  col = "#ffffff"
+)
+
+plot(modelo02,
+  bg = par("bg"),
+  col.axis = "#FFFFFF",
+  col.lab = "thistle"
+)
+
+```
+<figcaption>Figura 14 - gráficos de resíduos do modelo02</figcaption>
+
+<br>
+Verificando analiticamente a heteroscedasticidade:
+
+```{r label = 'modelo02_testes_verificacao'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+performance::check_heteroscedasticity(modelo02)
+
+```
+
+
+Constata-se que modelo não apresenta homocedasticidade, porém agora atende ao pressuposto de linearidade entre as variáveis e sem multicolinearidade, conforme valores abaixo.
+
+```{r label = 'vif_modelo02'}
+
+car::vif(modelo02)
+
+```
+
+
+### MODELO 03
+
+Inclui-se as interações entre as variáveis estação do ano x temperatura e estação do ano x umidade e adiciona-se as relações não lineares por meio das variáveis temp_linear, hum_linear e windspeed_linear.
+
+```{r}
+#| echo: true
+#| include: true
+#| code-fold: false
+      
+temp_linear <- treino$temp_norm + treino$temp_norm^2 + treino$temp_norm^3
+hum_linear <- treino$hum_norm + treino$hum_norm^2 + treino$hum_norm^3
+windspeed_linear <- treino$windspeed_norm + treino$windspeed_norm^2
+
+
+modelo03 <- lm(cnt ~ hum_linear +
+  temp_linear +
+  windspeed_linear +
+  season +
+  yr +
+  holiday +
+  weekday +
+  season * (. -mnth - atemp_norm_calc - workingday - temp_norm - hum_norm -
+              windspeed_norm - casual - registered - temp_real - hum_real - 
+              windspeed_real - dteday - hum_qual - weekday - yr -weekday - 
+              weathersit+ temp_linear + hum_linear), data = treino)
+
+summary(modelo03)
+
+car::vif(modelo03)
+
+```
+
+Verificando analiticamente a heteroscedasticidade:
+
+```{r label = 'teste_de_homocedasticidade'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+performance::check_heteroscedasticity(modelo03)
+
+```
+
+Agora, o modelo 03 atende aos pressupostos de homoscedasticidade, de linearidade e de ausência de *outliers* influentes.
+
+
+```{r label = 'graficos_modelo03'}
+#| column: page
+#| out-width: 70%
+#| fig-align: center
+
+op <- par(bg = "#000000")
+graphics::par(
+  mfrow = c(2, 2),
+  bty = "l",
+  col = "#FFFFFF"
+)
+
+plot(modelo03,
+  bg = par("bg"),
+  col.axis = "#FFFFFF",
+  col.lab = "thistle"
+)
+
+```
+<figcaption>Figura 15 - gráficos de resíduos do modelo03</figcaption>
+
+### SELECAO DE MODELOS
+
+```{r label = 'selecao_de_modelos'}
+
+sjPlot::tab_model(modelo01, modelo02, modelo03)
+
+```
+
+
+Com base no coeficiente de determinação ajustado, pode-se concluir que **o modelo 03 é o melhor, pois possui o maior  $R^{2}$ (0.841).**
+
+Alternativamente, pode-se avaliar os modelos segundo as métricas AIC (*Akaike Information Criterion*), cuja ideia básica é penalizar a inclusão de variáveis adicionais a um modelo e BIC (*Bayesian Information Criterion*), que é uma variante de AIC com penalidades mais fortes por incluir variáveis adicionais. Quanto menor estas métricas, melhor é o modelo. 
+
+A função *glance* do pacote *broom* nos fornece de forma consolidada os critérios.
+
+
+Para o modelo 01
+
+```{r label = 'outras_metricas_avaliacao_modelo01'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+broom::glance(modelo01) |> 
+  knitr::kable()
+
+```
+
+Para o modelo 02
+
+```{r label = 'outras_metricas_avaliacao_modelo02'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+broom::glance(modelo02) |> 
+  knitr::kable()
+```
+
+Para o modelo 03
+
+```{r label = 'outras_metricas_avaliacao_modelo03'}
+#| echo: true
+#| include: true
+#| code-fold: false
+
+broom::glance(modelo03) |> 
+  knitr::kable()
+
+```
+
+Pelas métricas AIC e BIC, o modelo 03 continua sendo o melhor entre os três modelos por possuir menores valores de AIC e BIC.
+
+
+### TESTE DO MODELO
+É possível avaliar o modelo final por meio da métrica MAPE (erro percentual absoluto médio), que expressa a porcentagem obtida pela diferença entre o valor predito e o valor real, dividido pelo valor real. 
+
+Quanto menor o valor, mais preciso é o modelo de regressão.
+
+
+```{r label = 'variaveis_teste'}
+#| echo: false
+#| include: false
+
+temp_linear <- teste$temp_norm + teste$temp_norm^2 + teste$temp_norm^3
+hum_linear <- teste$hum_norm + teste$hum_norm^2 + teste$hum_norm^3
+windspeed_linear <- teste$windspeed_norm + teste$windspeed_norm^2
+
+```
+
+
+```{r}
+#| include: true
+#| echo: true
+#| code-fold: false
+
+p <- predict(modelo03, teste)
+
+real <- teste$cnt
+
+ape <- function(yreal, yprev) {
+  abs((yreal - yprev) / yreal)
+}
+
+resultado <- mean(ape(yreal = real, yprev = p))
+resultado
+```
+
+Assim, tem-se que o modelo faz previsões com erro de `r round(resultado * 100,2)`%, e    acerto de `r round(100 - (resultado * 100),2)`%.
+
+### CONCLUSÃO 
+
+O modelo inicial não atendia aos pressupostos de linearidade, homoscedasticidade e normalidade dos resíduos. 
+
+Com o acréscimo de variáveis, das interações entre estação, temperatura, umidade e adicionando-se as relações não lineares (polinomiais) nas variáveis temperatura, umidade e velocidade do vento, construíu-se um modelo que atende aos requisitos da modelagem linear, exceto à normalidade dos resíduos. 
+
+O coeficiente de determinação R^2^ apresentou um bom valor de 0,841 e no teste de validação previu corretamente 80.4% dos resultados. Todavia, verificou-se no gráfico Q-Qplot da figura 15 que há indícios de que os resíduos não possuem uma distribuição normal (principalmente na cauda inferior). Este pressuposto é importante para que o erro padrão das estimativas seja calculado corretamente, o que indica que o uso da regressão linear múltipla possa não ser a melhor abordagem para o problema e que outros modelos de predição devam ser avaliados.
+
+

@@ -1,0 +1,95 @@
+:root{
+    font-size: 12pt;
+    color:#000000;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing: border-box;
+}
+
+body{   /*Especificação gerais do body */
+    font-size: 10pt;
+    text-indent: 0em;
+    color: #000000;
+    background-color: #F4F4F6;
+
+}
+
+h1{ /*Especificação dos títulos */
+    font-family: "Times New Roman", Times, serif;
+    font-size: 25pt;
+    font-weight: plain
+    color: black;
+    text-align: left;
+
+}
+
+h2{ /*Especificação dos títulos */
+    font-family: "Times New Roman", Times, serif;
+    font-size: 18pt;
+    color: black;
+    text-align: left;
+
+}
+
+h3{ /*Especificação dos títulos */
+    font-family: "Times New Roman", Times, serif;
+    font-size: 14pt;
+    color: black;
+    text-align: left;
+}
+
+
+h4, h5, h6 {    /*Especificação dos títulos */
+    color: #000000;
+    text-align: left;
+}
+
+
+p{      /*Especificação dos parágrafos */
+    font-family: 'arial';
+    text-align : justify;        /*opções: justify, right, left, center */
+    text-indent: 3em;
+    line-height: 2;
+    font-size: 12pt;
+    color: #000000;
+}
+
+p.question{
+    font-size:12pt;
+    color: teal
+}
+
+p.p1{
+    text-indent: 0em;
+    font-size:12pt;
+    color: #7D387D
+}
+
+p.center{
+    font-size: 15pt;
+    text-align: right
+}
+
+ul li{
+    color: #000000;
+    font-size: 9pt;
+}
+
+
+/*Especificação da classe center usada para centralizar textos de seletores */
+.center{
+    text-indent: 0em;
+}
+
+ul.a{
+    list-style-type: square;
+    list-style-position: outside;
+    text-align: justify;
+    line-height: 2.2;
+    font-size: 11pt;
+    color: #FFFFFF;
+}
+
